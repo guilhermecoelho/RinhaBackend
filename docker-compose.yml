@@ -1,0 +1,22 @@
+version: '3'
+services:
+
+     postgresqlserver:
+                image: postgres:12
+                container_name: postgresqlserver
+                volumes:
+                   - D:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
+                ports:
+                   - "5432:5432"
+                environment:
+                   - ACCEPT_EULA=Y 
+                   - MSSQL_PID=postgres
+                   - MSSQL_SA_PASSWORD=Postgres2018!    
+     pgAdmin:
+            image: dpage/pgadmin4:latest
+            container_name: pgadmin
+            ports:
+               - "8080:80"
+            environment:
+               PGADMIN_DEFAULT_EMAIL: "teste@teste.com"
+               PGADMIN_DEFAULT_PASSWORD: "PgAdmin2022!"
