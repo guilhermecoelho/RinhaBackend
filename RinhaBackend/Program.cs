@@ -1,9 +1,9 @@
 using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RinhaBackend.Data;
 using RinhaBackend.Models;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +13,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
+
+builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>();
+
 
 builder.Services.AddDbContext<RinhaBackendContext>();
 
@@ -59,26 +62,40 @@ app.Use(async (context, next) =>
 var _pessoaData = app.Services.GetRequiredService<IPessoaData>();
 
 
-app.MapPost("/pessoa", (PessoaRequest pessoa) =>
+app.MapPost("/pessoas", async (IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
 {
-    var pessoasModel = mapper.Map<PessoasModel>(pessoa);
+    var validationResult = await validator.ValidateAsync(pessoa);
 
+    if (validationResult.IsValid == false)
+        return Results.UnprocessableEntity(validationResult.ToDictionary());
+
+    if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
+        return Results.UnprocessableEntity("apelido existente");
+
+    var pessoasModel = mapper.Map<PessoasModel>(pessoa);
     var result = _pessoaData.Add(pessoasModel);
 
-    return Results.Created(result.Id.ToString(), pessoa);
-});
+    return Results.Created($"/pessoas/{result.Id}", pessoa);
 
-app.MapGet("/pessoa/{id}", async ([FromRoute] Guid id) =>
+}).Produces<PessoasModel>();
+
+app.MapGet("/pessoas/{id}", async ([FromRoute] Guid id) =>
 {
     var result = mapper.Map<PessoaResponse>(await _pessoaData.GetById(id));
+
+    if (result == null)
+        return Results.NotFound();
 
     return Results.Ok(result);
 
 });
 
-app.MapGet("/pessoa/", async (string t) =>
+app.MapGet("/pessoas/", async (string t) =>
 {
-    var result = await _pessoaData.GetByName(t);
+    if (string.IsNullOrEmpty(t))
+        return Results.BadRequest();
+
+    var result = mapper.Map<ICollection<PessoaResponse>>(await _pessoaData.SearchByString(t));
     return Results.Ok(result);
 });
 

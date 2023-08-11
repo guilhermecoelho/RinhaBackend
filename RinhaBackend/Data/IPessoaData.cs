@@ -7,5 +7,7 @@ namespace RinhaBackend.Data
         PessoasModel Add(PessoasModel pessoa);
         Task<PessoasModel> GetById(Guid id);
         Task<IQueryable<PessoasModel>> GetByName(string nome);
+        Task<bool> IsApelidoExist(string apelido);
+        Task<IQueryable<PessoasModel>> SearchByString(string search);
     }
 }

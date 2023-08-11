@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RinhaBackend.Models;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace RinhaBackend.Data
 {
@@ -27,6 +28,19 @@ namespace RinhaBackend.Data
 
         public async Task<IQueryable<PessoasModel>> GetByName(string nome)
             => _db.Pessoas.Where(x => x.Nome == nome);
+
+        public async Task<bool> IsApelidoExist(string apelido)
+           => await _db.Pessoas.AnyAsync(x => x.Apelido == apelido);
+
+        public async Task<IQueryable<PessoasModel>> SearchByString(string search)
+        {
+            return _db.Pessoas.Include(x => x.Stacks).Where(x =>
+            (EF.Functions.Like(x.Nome, $"%{search}%"))
+            || (EF.Functions.Like(x.Apelido, $"%{search}%"))
+            || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
+
+        }
+
 
     }
 }

@@ -5,7 +5,7 @@ services:
                 image: postgres:12
                 container_name: postgresqlserver
                 volumes:
-                   - D:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
+                   - C:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
                 ports:
                    - "5432:5432"
                 environment:
