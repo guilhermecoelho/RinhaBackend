@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RinhaBackend.Models;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace RinhaBackend.Data
 {
@@ -40,7 +39,5 @@ namespace RinhaBackend.Data
             || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
 
         }
-
-
     }
 }

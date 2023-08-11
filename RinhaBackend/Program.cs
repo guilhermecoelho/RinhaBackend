@@ -88,7 +88,7 @@ app.MapGet("/pessoas/{id}", async ([FromRoute] Guid id) =>
 
     return Results.Ok(result);
 
-});
+}).Produces<PessoaResponse>();
 
 app.MapGet("/pessoas/", async (string t) =>
 {
@@ -97,7 +97,7 @@ app.MapGet("/pessoas/", async (string t) =>
 
     var result = mapper.Map<ICollection<PessoaResponse>>(await _pessoaData.SearchByString(t));
     return Results.Ok(result);
-});
+}).Produces<PessoaResponse>();
 
 
 app.Run();
