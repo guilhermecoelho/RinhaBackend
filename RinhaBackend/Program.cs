@@ -45,26 +45,10 @@ builder.Services.AddSingleton(mapper);
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-
-//app.Use(async (context, next) =>
-//{
-//    context.Response.OnStarting(() =>
-//    {
-//        return Task.CompletedTask;
-//    });
-//    await next(context);
-//});
 
 var _cache = app.Services.GetRequiredService<IDistributedCache>();
 var _pessoaData = app.Services.GetRequiredService<IPessoaData>();
@@ -111,6 +95,11 @@ app.MapGet("/pessoas/", async (string t) =>
 
     var result = mapper.Map<ICollection<PessoaResponse>>(await _pessoaData.SearchByString(t));
     return Results.Ok(result);
+}).Produces<PessoaResponse>();
+
+app.MapGet("/contagem-pessoas/", async () =>
+{
+    return Results.Ok(await _pessoaData.GetTotalPessoas());
 }).Produces<PessoaResponse>();
 
 

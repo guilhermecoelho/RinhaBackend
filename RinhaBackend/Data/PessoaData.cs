@@ -18,7 +18,6 @@ namespace RinhaBackend.Data
             _db.SaveChanges();
 
             return pessoa;
-
         }
 
         public async Task<PessoasModel> GetById(Guid id)
@@ -37,7 +36,9 @@ namespace RinhaBackend.Data
             (EF.Functions.Like(x.Nome, $"%{search}%"))
             || (EF.Functions.Like(x.Apelido, $"%{search}%"))
             || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
-
         }
+
+        public async Task<int> GetTotalPessoas()
+         => await _db.Pessoas.CountAsync();
     }
 }
