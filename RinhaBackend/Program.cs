@@ -2,6 +2,7 @@ using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using RinhaBackend.Data;
 using RinhaBackend.Models;
 
@@ -12,18 +13,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//redis
+var redisConnectionsString = builder.Configuration.GetConnectionString("RedisConnection");
+builder.Services.AddStackExchangeRedisCache(options => { options.Configuration = redisConnectionsString; });
+
+//database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
-
-builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>();
-
-
 builder.Services.AddDbContext<RinhaBackendContext>();
-
 var dbBuilder = new DbContextOptionsBuilder<RinhaBackendContext>().UseNpgsql(connectionString);
 var db = new RinhaBackendContext(dbBuilder.Options);
 
+//interfaces
 builder.Services.AddSingleton<IPessoaData>(new PessoaData(db));
 
+//validators
+builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>();
+
+//Mappers
 IMapper mapper = new MapperConfiguration(cfg =>
     {
         cfg.CreateMap<PessoasModel, PessoaResponse>()
@@ -35,7 +41,6 @@ IMapper mapper = new MapperConfiguration(cfg =>
            .ForMember(dest => dest.Stacks, opt => opt.MapFrom(src => src.Stacks.Select(x => new StackModel { Nome = x })));
     }
 ).CreateMapper();
-
 builder.Services.AddSingleton(mapper);
 
 var app = builder.Build();
@@ -52,15 +57,16 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-app.Use(async (context, next) =>
-{
-    context.Response.OnStarting(() =>
-    {
-        return Task.CompletedTask;
-    });
-    await next(context);
-});
+//app.Use(async (context, next) =>
+//{
+//    context.Response.OnStarting(() =>
+//    {
+//        return Task.CompletedTask;
+//    });
+//    await next(context);
+//});
 
+var _cache = app.Services.GetRequiredService<IDistributedCache>();
 var _pessoaData = app.Services.GetRequiredService<IPessoaData>();
 
 
@@ -71,11 +77,17 @@ app.MapPost("/pessoas", async (IValidator<PessoaRequest> validator, PessoaReques
     if (validationResult.IsValid == false)
         return Results.UnprocessableEntity(validationResult.ToDictionary());
 
-    if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
+    if (await _cache.GetAsync($"pessoa_apelido:{pessoa.Apelido}") != null)
+        return Results.UnprocessableEntity("apelido existente");
+
+    else if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
         return Results.UnprocessableEntity("apelido existente");
 
     var pessoasModel = mapper.Map<PessoasModel>(pessoa);
+
     var result = _pessoaData.Add(pessoasModel);
+
+    await _cache.SetStringAsync($"pessoa_apelido:{pessoa.Apelido}", pessoa.Apelido);
 
     return Results.Created($"/pessoas/{result.Id}", pessoa);
 

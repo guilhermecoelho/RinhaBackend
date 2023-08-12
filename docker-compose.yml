@@ -8,7 +8,7 @@ services:
           context: .
           dockerfile: RinhaBackend/Dockerfile
         depends_on:
-          - postgresqlserver
+          - db
           - redis
         ports:
           - "53340:80"
@@ -25,7 +25,7 @@ services:
           context: .
           dockerfile: RinhaBackend/Dockerfile
         depends_on:
-          - postgresqlserver
+          - db
           - redis
         ports:
           - "53344:80"
@@ -62,20 +62,20 @@ services:
               cpus: '0.1'
               memory: '0.2GB'
 
-     postgresqlserver:
-                image: postgres:12
-                container_name: postgresqlserver
-                volumes:
-                   - C:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
-                ports:
-                   - "5432:5432"
-                environment:
-                   - ACCEPT_EULA=Y 
-                   - MSSQL_PID=postgres
-                   - MSSQL_SA_PASSWORD=Postgres2018!    
-     pgAdmin:
+     db:
+        image: postgres:12
+        container_name: db
+        volumes:
+           - C:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
+        ports:
+           - "5432:5432"
+        environment:
+           - ACCEPT_EULA=Y 
+           - MSSQL_PID=postgres
+           - POSTGRES_PASSWORD=Postgres2018!            
+     dbAdmin:
             image: dpage/pgadmin4:latest
-            container_name: pgadmin
+            container_name: dbadmin
             ports:
                - "8080:80"
             environment:
