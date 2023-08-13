@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using RinhaBackend.Data;
 using RinhaBackend.Models;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,11 +20,12 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
-builder.Services.AddDbContext<RinhaBackendContext>();
+builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
 var dbBuilder = new DbContextOptionsBuilder<RinhaBackendContext>().UseNpgsql(connectionString);
 var db = new RinhaBackendContext(dbBuilder.Options);
 
 //interfaces
+
 builder.Services.AddSingleton<IPessoaData>(new PessoaData(db));
 
 //validators
@@ -54,7 +56,7 @@ var _cache = app.Services.GetRequiredService<IDistributedCache>();
 var _pessoaData = app.Services.GetRequiredService<IPessoaData>();
 
 
-app.MapPost("/pessoas", async (IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
+app.MapPost("/pessoas", async (RinhaBackendContext dbContext, HttpContext httpContext,IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
 {
     var validationResult = await validator.ValidateAsync(pessoa);
 
@@ -64,27 +66,49 @@ app.MapPost("/pessoas", async (IValidator<PessoaRequest> validator, PessoaReques
     if (await _cache.GetAsync($"pessoa_apelido:{pessoa.Apelido}") != null)
         return Results.UnprocessableEntity("apelido existente");
 
-    else if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
+    if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
         return Results.UnprocessableEntity("apelido existente");
 
-    var pessoasModel = mapper.Map<PessoasModel>(pessoa);
+    //var result = await _pessoaData.Add(mapper.Map<PessoasModel>(pessoa));
 
-    var result = _pessoaData.Add(pessoasModel);
+    var pessoalModel = mapper.Map<PessoasModel>(pessoa);
+    dbContext.Pessoas.Add(pessoalModel);
+    await dbContext.SaveChangesAsync();
 
-    await _cache.SetStringAsync($"pessoa_apelido:{pessoa.Apelido}", pessoa.Apelido);
+    await _cache.SetStringAsync($"pessoa_apelido:{pessoalModel.Apelido}", pessoalModel.Apelido);
+    await _cache.SetStringAsync($"pessoa_id:{pessoalModel.Id}", JsonSerializer.Serialize(pessoalModel));
 
-    return Results.Created($"/pessoas/{result.Id}", pessoa);
+    return Results.Created($"{httpContext.Request.Scheme}://{httpContext.Request.Host}/pessoas/{pessoalModel.Id}", pessoalModel);
 
 }).Produces<PessoasModel>();
 
-app.MapGet("/pessoas/{id}", async ([FromRoute] Guid id) =>
+app.MapGet("/pessoas/{id}", async (RinhaBackendContext dbContext, [FromRoute] Guid id) =>
 {
-    var result = mapper.Map<PessoaResponse>(await _pessoaData.GetById(id));
+    try
+    {
+        var cache = await _cache.GetStringAsync($"pessoa_id:{id}");
+        if (cache != null)
+        {
+            var pessoaModel = JsonSerializer.Deserialize<PessoasModel>(cache);
+            var pessoaResponse = mapper.Map<PessoaResponse>(pessoaModel);
 
-    if (result == null)
-        return Results.NotFound();
+            return Results.Ok(pessoaResponse);
+        }
 
-    return Results.Ok(result);
+        var result = mapper.Map<PessoaResponse>(await dbContext.Pessoas.Include(x => x.Stacks).FirstOrDefaultAsync(x => x.Id == id));
+
+        if (result == null)
+            return Results.NotFound();
+
+        await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
+
+        return Results.Ok(result);
+    }
+    catch(Exception ex)
+    {
+        return Results.Ok(ex);
+    }
+
 
 }).Produces<PessoaResponse>();
 
@@ -93,8 +117,18 @@ app.MapGet("/pessoas/", async (string t) =>
     if (string.IsNullOrEmpty(t))
         return Results.BadRequest();
 
+    var cache = await _cache.GetStringAsync($"pessoa_search:{t}");
+    if (cache != null)
+    {
+        var pessoaResponse = JsonSerializer.Deserialize<List<PessoaResponse>>(cache);
+        return Results.Ok(pessoaResponse);
+    }
+
     var result = mapper.Map<ICollection<PessoaResponse>>(await _pessoaData.SearchByString(t));
+
+    await _cache.SetStringAsync($"pessoa_search:{t}", JsonSerializer.Serialize(result));
     return Results.Ok(result);
+
 }).Produces<PessoaResponse>();
 
 app.MapGet("/contagem-pessoas/", async () =>
