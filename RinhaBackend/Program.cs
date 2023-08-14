@@ -107,16 +107,8 @@ app.MapGet("/pessoas/", async ([FromServices] IPessoaData _pessoaData, [FromServ
     if (string.IsNullOrEmpty(t))
         return Results.BadRequest();
 
-    var cache = await _cache.GetStringAsync($"pessoa_search:{t}");
-    if (cache != null)
-    {
-        var pessoaResponse = JsonSerializer.Deserialize<List<PessoaResponse>>(cache);
-        return Results.Ok(pessoaResponse);
-    }
-
     var result = mapper.Map<ICollection<PessoaResponse>>(await _pessoaData.SearchByString(t));
 
-    await _cache.SetStringAsync($"pessoa_search:{t}", JsonSerializer.Serialize(result));
     return Results.Ok(result);
 
 }).Produces<PessoaResponse>();
