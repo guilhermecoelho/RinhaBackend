@@ -21,12 +21,9 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
 builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
-var dbBuilder = new DbContextOptionsBuilder<RinhaBackendContext>().UseNpgsql(connectionString);
-var db = new RinhaBackendContext(dbBuilder.Options);
 
 //interfaces
-
-builder.Services.AddSingleton<IPessoaData>(new PessoaData(db));
+builder.Services.AddTransient<IPessoaData, PessoaData>();
 
 //validators
 builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>();
@@ -52,11 +49,8 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
-var _cache = app.Services.GetRequiredService<IDistributedCache>();
-var _pessoaData = app.Services.GetRequiredService<IPessoaData>();
 
-
-app.MapPost("/pessoas", async (RinhaBackendContext dbContext, HttpContext httpContext,IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
+app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache,  HttpContext httpContext, IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
 {
     var validationResult = await validator.ValidateAsync(pessoa);
 
@@ -69,20 +63,16 @@ app.MapPost("/pessoas", async (RinhaBackendContext dbContext, HttpContext httpCo
     if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
         return Results.UnprocessableEntity("apelido existente");
 
-    //var result = await _pessoaData.Add(mapper.Map<PessoasModel>(pessoa));
+    var result = await _pessoaData.Add(mapper.Map<PessoasModel>(pessoa));
 
-    var pessoalModel = mapper.Map<PessoasModel>(pessoa);
-    dbContext.Pessoas.Add(pessoalModel);
-    await dbContext.SaveChangesAsync();
+    await _cache.SetStringAsync($"pessoa_apelido:{result.Apelido}", result.Apelido);
+    await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
 
-    await _cache.SetStringAsync($"pessoa_apelido:{pessoalModel.Apelido}", pessoalModel.Apelido);
-    await _cache.SetStringAsync($"pessoa_id:{pessoalModel.Id}", JsonSerializer.Serialize(pessoalModel));
-
-    return Results.Created($"{httpContext.Request.Scheme}://{httpContext.Request.Host}/pessoas/{pessoalModel.Id}", pessoalModel);
+    return Results.Created($"{httpContext.Request.Scheme}://{httpContext.Request.Host}/pessoas/{result.Id}", result);
 
 }).Produces<PessoasModel>();
 
-app.MapGet("/pessoas/{id}", async (RinhaBackendContext dbContext, [FromRoute] Guid id) =>
+app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, [FromRoute] Guid id) =>
 {
     try
     {
@@ -95,7 +85,7 @@ app.MapGet("/pessoas/{id}", async (RinhaBackendContext dbContext, [FromRoute] Gu
             return Results.Ok(pessoaResponse);
         }
 
-        var result = mapper.Map<PessoaResponse>(await dbContext.Pessoas.Include(x => x.Stacks).FirstOrDefaultAsync(x => x.Id == id));
+        var result = mapper.Map<PessoaResponse>(await _pessoaData.GetById(id));
 
         if (result == null)
             return Results.NotFound();
@@ -104,7 +94,7 @@ app.MapGet("/pessoas/{id}", async (RinhaBackendContext dbContext, [FromRoute] Gu
 
         return Results.Ok(result);
     }
-    catch(Exception ex)
+    catch (Exception ex)
     {
         return Results.Ok(ex);
     }
@@ -112,7 +102,7 @@ app.MapGet("/pessoas/{id}", async (RinhaBackendContext dbContext, [FromRoute] Gu
 
 }).Produces<PessoaResponse>();
 
-app.MapGet("/pessoas/", async (string t) =>
+app.MapGet("/pessoas/", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, string t) =>
 {
     if (string.IsNullOrEmpty(t))
         return Results.BadRequest();
@@ -131,7 +121,7 @@ app.MapGet("/pessoas/", async (string t) =>
 
 }).Produces<PessoaResponse>();
 
-app.MapGet("/contagem-pessoas/", async () =>
+app.MapGet("/contagem-pessoas/", async ([FromServices] IPessoaData _pessoaData) =>
 {
     return Results.Ok(await _pessoaData.GetTotalPessoas());
 }).Produces<PessoaResponse>();
