@@ -34,7 +34,6 @@ namespace RinhaBackend.Data
 
         protected override void OnModelCreating(ModelBuilder mb)
         {
-
             mb.Entity<PessoaModel>().HasKey(c => c.Id);
             mb.Entity<PessoaModel>().Property(c => c.Nome).HasMaxLength(100).IsRequired();
             mb.Entity<PessoaModel>().Property(c => c.Apelido).HasMaxLength(32).IsRequired();
