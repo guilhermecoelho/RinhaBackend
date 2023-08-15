@@ -7,11 +7,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RinhaBackend", "RinhaBacken
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{49165A74-440C-45FE-B81B-4E0584635903}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
 		docker-compose.yml = docker-compose.yml
 		nginx.conf = nginx.conf
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "database", "database", "{D59D43C3-D1D9-4030-A4A8-97BC230F93A9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db_folder", "db_folder", "{D9DF0637-7BED-4DDC-BD01-C0537E104254}"
+	ProjectSection(SolutionItems) = preProject
+		.gitkeep = .gitkeep
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,7 +32,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{D59D43C3-D1D9-4030-A4A8-97BC230F93A9} = {49165A74-440C-45FE-B81B-4E0584635903}
+		{D9DF0637-7BED-4DDC-BD01-C0537E104254} = {49165A74-440C-45FE-B81B-4E0584635903}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7EFB4033-8DEF-4287-8FAD-A4291DCEB2DB}

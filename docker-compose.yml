@@ -1,6 +1,18 @@
 version: '3'
 services:
 
+     db:
+        image: postgres:12
+        container_name: db
+        volumes:
+           - ./db_folder:/var/lib/postgresql/data 
+        ports:
+           - "5432:5432"
+        environment:
+           - ACCEPT_EULA=Y 
+           - MSSQL_PID=postgres
+           - POSTGRES_PASSWORD=Postgres2018!   
+
      api01:
         container_name: api01
         image: rinhabackend
@@ -27,6 +39,7 @@ services:
         depends_on:
           - db
           - redis
+          - api01 #only to avoid conflit when creating database for the first time
         ports:
           - "53344:80"
           - "53345:443"
@@ -61,18 +74,7 @@ services:
             limits:
               cpus: '0.1'
               memory: '0.2GB'
-
-     db:
-        image: postgres:12
-        container_name: db
-        volumes:
-           - ./database:/var/lib/postgresql/data 
-        ports:
-           - "5432:5432"
-        environment:
-           - ACCEPT_EULA=Y 
-           - MSSQL_PID=postgres
-           - POSTGRES_PASSWORD=Postgres2018!            
+         
      dbAdmin:
             image: dpage/pgadmin4:latest
             container_name: dbadmin

@@ -1,10 +1,12 @@
 using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using RinhaBackend.Data;
 using RinhaBackend.Models;
+using System.IO.Compression;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+//http response compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.SmallestSize;
+});
+
+
+//others
+builder.Services.AddTransient<IHttpContextAccessor, HttpContextAccessor>();
+
 //redis
 var redisConnectionsString = builder.Configuration.GetConnectionString("RedisConnection");
 builder.Services.AddStackExchangeRedisCache(options => { options.Configuration = redisConnectionsString; });
@@ -21,6 +43,12 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
 builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
+
+//create database if not exist
+using (var context = new RinhaBackendContext(connectionString))
+{
+    context.Database.Migrate();
+}
 
 //interfaces
 builder.Services.AddTransient<IPessoaData, PessoaData>();
@@ -42,15 +70,21 @@ IMapper mapper = new MapperConfiguration(cfg =>
 ).CreateMapper();
 builder.Services.AddSingleton(mapper);
 
+//build App
 var app = builder.Build();
 
+
+
+//Use
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
+app.UseResponseCompression();
 
-app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache,  HttpContext httpContext, IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
+
+app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, IHttpContextAccessor accessor, IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
 {
     var validationResult = await validator.ValidateAsync(pessoa);
 
@@ -68,7 +102,8 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServ
     await _cache.SetStringAsync($"pessoa_apelido:{result.Apelido}", result.Apelido);
     await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
 
-    return Results.Created($"{httpContext.Request.Scheme}://{httpContext.Request.Host}/pessoas/{result.Id}", result);
+    var httpContext = accessor.HttpContext;
+    return Results.Created($"{httpContext?.Request.Scheme}://{httpContext?.Request.Host}/pessoas/{result.Id}", result);
 
 }).Produces<PessoasModel>();
 
