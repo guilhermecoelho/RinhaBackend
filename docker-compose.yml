@@ -12,6 +12,11 @@ services:
            - ACCEPT_EULA=Y 
            - MSSQL_PID=postgres
            - POSTGRES_PASSWORD=Postgres2018!   
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.75'
+                    memory: '1.5GB'
 
      api01:
         container_name: api01
