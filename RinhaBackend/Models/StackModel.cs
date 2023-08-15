@@ -9,6 +9,6 @@ namespace RinhaBackend.Models
         public Guid PessoaId { get; set; }
 
         [JsonIgnore]
-        public PessoasModel Pessoa { get; set; }
+        public PessoaModel Pessoa { get; set; }
     }
 }

@@ -17,7 +17,7 @@ namespace RinhaBackend.Data
             ConnectionString = connectionString;
         }
 
-        public DbSet<PessoasModel> Pessoas { get; set; }
+        public DbSet<PessoaModel> Pessoas { get; set; }
         public DbSet<StackModel> Stacks { get; set; }
 
 
@@ -35,11 +35,11 @@ namespace RinhaBackend.Data
         protected override void OnModelCreating(ModelBuilder mb)
         {
 
-            mb.Entity<PessoasModel>().HasKey(c => c.Id);
-            mb.Entity<PessoasModel>().Property(c => c.Nome).HasMaxLength(100).IsRequired();
-            mb.Entity<PessoasModel>().Property(c => c.Apelido).HasMaxLength(32).IsRequired();
-            mb.Entity<PessoasModel>().Property(c => c.Nascimento).IsRequired();
-            mb.Entity<PessoasModel>()
+            mb.Entity<PessoaModel>().HasKey(c => c.Id);
+            mb.Entity<PessoaModel>().Property(c => c.Nome).HasMaxLength(100).IsRequired();
+            mb.Entity<PessoaModel>().Property(c => c.Apelido).HasMaxLength(32).IsRequired();
+            mb.Entity<PessoaModel>().Property(c => c.Nascimento).IsRequired();
+            mb.Entity<PessoaModel>()
             .HasMany(a => a.Stacks)
             .WithOne(b => b.Pessoa)
             .HasForeignKey(c => c.PessoaId);

@@ -51,7 +51,7 @@ using (var context = new RinhaBackendContext(connectionString))
 }
 
 //interfaces
-builder.Services.AddTransient<IPessoaData, PessoaData>();
+builder.Services.AddTransient<IPessoaRepository, PessoaRepository>();
 
 //validators
 builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>();
@@ -59,11 +59,11 @@ builder.Services.AddScoped<IValidator<PessoaRequest>, PessoaRequestValidation>()
 //Mappers
 IMapper mapper = new MapperConfiguration(cfg =>
     {
-        cfg.CreateMap<PessoasModel, PessoaResponse>()
+        cfg.CreateMap<PessoaModel, PessoaResponse>()
             .ForMember(dest => dest.Nascimento, opt => opt.MapFrom(src => src.Nascimento.ToString("yyyy-MM-dd")))
             .ForMember(dest => dest.Stacks, opt => opt.MapFrom(src => src.Stacks.Select(x => x.Nome)));
 
-        cfg.CreateMap<PessoaRequest, PessoasModel>()
+        cfg.CreateMap<PessoaRequest, PessoaModel>()
            .ForMember(dest => dest.Nascimento, opt => opt.MapFrom(src => DateTime.SpecifyKind(DateTime.Parse(src.Nascimento), DateTimeKind.Utc)))
            .ForMember(dest => dest.Stacks, opt => opt.MapFrom(src => src.Stacks.Select(x => new StackModel { Nome = x })));
     }
@@ -80,7 +80,7 @@ app.UseHttpsRedirection();
 app.UseResponseCompression();
 
 
-app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, IHttpContextAccessor accessor, IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
+app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaData, [FromServices] IDistributedCache _cache, IHttpContextAccessor accessor, IValidator<PessoaRequest> validator, PessoaRequest pessoa) =>
 {
     var validationResult = await validator.ValidateAsync(pessoa);
 
@@ -93,7 +93,7 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServ
     if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
         return Results.UnprocessableEntity("apelido existente");
 
-    var result = await _pessoaData.Add(mapper.Map<PessoasModel>(pessoa));
+    var result = await _pessoaData.Add(mapper.Map<PessoaModel>(pessoa));
 
     await _cache.SetStringAsync($"pessoa_apelido:{result.Apelido}", result.Apelido);
     await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
@@ -101,16 +101,16 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaData _pessoaData, [FromServ
     var httpContext = accessor.HttpContext;
     return Results.Created($"{httpContext?.Request.Scheme}://{httpContext?.Request.Host}/pessoas/{result.Id}", result);
 
-}).Produces<PessoasModel>();
+}).Produces<PessoaModel>();
 
-app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, [FromRoute] Guid id) =>
+app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaRepository _pessoaData, [FromServices] IDistributedCache _cache, [FromRoute] Guid id) =>
 {
     try
     {
         var cache = await _cache.GetStringAsync($"pessoa_id:{id}");
         if (cache != null)
         {
-            var pessoaModel = JsonSerializer.Deserialize<PessoasModel>(cache);
+            var pessoaModel = JsonSerializer.Deserialize<PessoaModel>(cache);
             var pessoaResponse = mapper.Map<PessoaResponse>(pessoaModel);
 
             return Results.Ok(pessoaResponse);
@@ -133,7 +133,7 @@ app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaData _pessoaData, [From
 
 }).Produces<PessoaResponse>();
 
-app.MapGet("/pessoas/", async ([FromServices] IPessoaData _pessoaData, [FromServices] IDistributedCache _cache, string t) =>
+app.MapGet("/pessoas/", async ([FromServices] IPessoaRepository _pessoaData, [FromServices] IDistributedCache _cache, string t) =>
 {
     if (string.IsNullOrEmpty(t))
         return Results.BadRequest();
@@ -144,7 +144,7 @@ app.MapGet("/pessoas/", async ([FromServices] IPessoaData _pessoaData, [FromServ
 
 }).Produces<PessoaResponse>();
 
-app.MapGet("/contagem-pessoas/", async ([FromServices] IPessoaData _pessoaData) =>
+app.MapGet("/contagem-pessoas/", async ([FromServices] IPessoaRepository _pessoaData) =>
 {
     return Results.Ok(await _pessoaData.GetTotalPessoas());
 }).Produces<PessoaResponse>();

@@ -3,16 +3,16 @@ using RinhaBackend.Models;
 
 namespace RinhaBackend.Data
 {
-    public class PessoaData : IPessoaData
+    public class PessoaRepository : IPessoaRepository
     {
         private readonly RinhaBackendContext _db;
 
-        public PessoaData(RinhaBackendContext db)
+        public PessoaRepository(RinhaBackendContext db)
         {
             _db = db;
         }
 
-        public async Task<PessoasModel> Add(PessoasModel pessoa)
+        public async Task<PessoaModel> Add(PessoaModel pessoa)
         {
             _db.Pessoas.Add(pessoa);
             await _db.SaveChangesAsync();
@@ -20,13 +20,13 @@ namespace RinhaBackend.Data
             return pessoa;
         }
 
-        public async Task<PessoasModel> GetById(Guid id)
+        public async Task<PessoaModel> GetById(Guid id)
             => await _db.Pessoas.Include(x => x.Stacks).AsSplitQuery().FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<bool> IsApelidoExist(string apelido)
            => await _db.Pessoas.AsSplitQuery().AnyAsync(x => x.Apelido == apelido);
 
-        public async Task<IQueryable<PessoasModel>> SearchByString(string search)
+        public async Task<IQueryable<PessoaModel>> SearchByString(string search)
         {
             return _db.Pessoas.Include(x => x.Stacks).AsSplitQuery().Take(50).Where(x =>
             (EF.Functions.Like(x.Nome, $"%{search}%"))

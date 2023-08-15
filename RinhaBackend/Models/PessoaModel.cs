@@ -2,7 +2,7 @@
 
 namespace RinhaBackend.Models
 {
-    public class PessoasModel
+    public class PessoaModel
     {
         public Guid Id { get; set; }
 
