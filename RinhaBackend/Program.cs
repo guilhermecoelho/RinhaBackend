@@ -73,14 +73,10 @@ builder.Services.AddSingleton(mapper);
 //build App
 var app = builder.Build();
 
-
-
 //Use
 app.UseSwagger();
 app.UseSwaggerUI();
-
 app.UseHttpsRedirection();
-
 app.UseResponseCompression();
 
 
