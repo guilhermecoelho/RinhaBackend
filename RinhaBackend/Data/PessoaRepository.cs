@@ -1,5 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Dapper;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RinhaBackend.Models;
+using StackExchange.Redis;
+using System.Collections.Generic;
 
 namespace RinhaBackend.Data
 {
@@ -14,7 +18,7 @@ namespace RinhaBackend.Data
 
         public async Task<PessoaModel> Add(PessoaModel pessoa)
         {
-            _db.Pessoas.Add(pessoa);
+            await _db.Pessoas.AddAsync(pessoa);
             await _db.SaveChangesAsync();
 
             return pessoa;
@@ -28,10 +32,11 @@ namespace RinhaBackend.Data
 
         public async Task<IQueryable<PessoaModel>> SearchByString(string search)
         {
+
             return _db.Pessoas.Include(x => x.Stacks).AsSplitQuery().Take(50).Where(x =>
-            (EF.Functions.Like(x.Nome, $"%{search}%"))
-            || (EF.Functions.Like(x.Apelido, $"%{search}%"))
-            || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
+                (EF.Functions.Like(x.Nome, $"%{search}%"))
+                || (EF.Functions.Like(x.Apelido, $"%{search}%"))
+                || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
         }
 
         public async Task<int> GetTotalPessoas()

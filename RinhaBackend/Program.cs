@@ -93,7 +93,10 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaData, [Fr
     if (await _pessoaData.IsApelidoExist(pessoa.Apelido))
         return Results.UnprocessableEntity("apelido existente");
 
-    var result = await _pessoaData.Add(mapper.Map<PessoaModel>(pessoa));
+    var pessoaModel = mapper.Map<PessoaModel>(pessoa);
+    pessoaModel.Id = Guid.NewGuid();
+
+    var result = await _pessoaData.Add(pessoaModel);
 
     await _cache.SetStringAsync($"pessoa_apelido:{result.Apelido}", result.Apelido);
     await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
