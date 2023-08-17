@@ -3,33 +3,38 @@ using RinhaBackend.Models;
 
 namespace RinhaBackend.Data
 {
-    public class RinhaBackendContext : DbContext
+    public class RinhaBackendContext : DbContext, IDisposable
     {
-        private readonly string ConnectionString;
+        //private readonly string ConnectionString;
 
         public RinhaBackendContext(DbContextOptions<RinhaBackendContext> option) : base(option)
         {
 
         }
 
-        public RinhaBackendContext(string connectionString)
-        {
-            ConnectionString = connectionString;
-        }
+        //public RinhaBackendContext(string connectionString)
+        //{
+        //    ConnectionString = connectionString;
+        //}
 
         public DbSet<PessoaModel> Pessoas { get; set; }
         public DbSet<StackModel> Stacks { get; set; }
 
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .Build();
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+        //    var configuration = new ConfigurationBuilder()
+        //        .SetBasePath(Directory.GetCurrentDirectory())
+        //        .AddJsonFile("appsettings.json")
+        //        .Build();
 
-            var connectionString = configuration.GetConnectionString("PostgreSqlConnection");
-            optionsBuilder.UseNpgsql(connectionString);
+        //    var connectionString = configuration.GetConnectionString("PostgreSqlConnection");
+        //    optionsBuilder.UseNpgsql(connectionString);
+        //}
+
+        public override void Dispose()
+        {
+            base.Dispose();
         }
 
         protected override void OnModelCreating(ModelBuilder mb)

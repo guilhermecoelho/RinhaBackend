@@ -1,9 +1,5 @@
-﻿using Dapper;
-using Microsoft.EntityFrameworkCore;
-using Npgsql;
+﻿using Microsoft.EntityFrameworkCore;
 using RinhaBackend.Models;
-using StackExchange.Redis;
-using System.Collections.Generic;
 
 namespace RinhaBackend.Data
 {
@@ -25,21 +21,21 @@ namespace RinhaBackend.Data
         }
 
         public async Task<PessoaModel> GetById(Guid id)
-            => await _db.Pessoas.Include(x => x.Stacks).AsSplitQuery().FirstOrDefaultAsync(x => x.Id == id);
+            => await _db.Pessoas.AsNoTracking().Include(x => x.Stacks).AsSplitQuery().FirstOrDefaultAsync(x => x.Id == id);
 
         public async Task<bool> IsApelidoExist(string apelido)
-           => await _db.Pessoas.AsSplitQuery().AnyAsync(x => x.Apelido == apelido);
+           => await _db.Pessoas.AsNoTracking().AsSplitQuery().AnyAsync(x => x.Apelido == apelido);
 
         public async Task<IQueryable<PessoaModel>> SearchByString(string search)
         {
 
-            return _db.Pessoas.Include(x => x.Stacks).AsSplitQuery().Take(50).Where(x =>
+            return _db.Pessoas.AsNoTracking().Include(x => x.Stacks).AsSplitQuery().Take(50).Where(x =>
                 (EF.Functions.Like(x.Nome, $"%{search}%"))
                 || (EF.Functions.Like(x.Apelido, $"%{search}%"))
                 || (x.Stacks.Any(c => (EF.Functions.Like(c.Nome, $"%{search}%")))));
         }
 
         public async Task<int> GetTotalPessoas()
-         => await _db.Pessoas.CountAsync();
+         => await _db.Pessoas.AsNoTracking().CountAsync();
     }
 }

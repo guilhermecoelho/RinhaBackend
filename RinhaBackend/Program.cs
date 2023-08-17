@@ -42,13 +42,14 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
-builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
+//builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
+builder.Services.AddDbContextPool<RinhaBackendContext>(conn => conn.UseNpgsql(connectionString, options => options.EnableRetryOnFailure()), 8192); 
 
 //create database if not exist
-using (var context = new RinhaBackendContext(connectionString))
-{
-    context.Database.Migrate();
-}
+//using (var context = new RinhaBackendContext(connectionString))
+//{
+//    context.Database.Migrate();
+//}
 
 //interfaces
 builder.Services.AddTransient<IPessoaRepository, PessoaRepository>();
@@ -98,11 +99,11 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaData, [Fr
 
     var result = await _pessoaData.Add(pessoaModel);
 
-    await _cache.SetStringAsync($"pessoa_apelido:{result.Apelido}", result.Apelido);
-    await _cache.SetStringAsync($"pessoa_id:{result.Id}", JsonSerializer.Serialize(result));
+    await _cache.SetStringAsync($"pessoa_apelido:{pessoaModel.Apelido}", pessoaModel.Apelido);
+    await _cache.SetStringAsync($"pessoa_id:{pessoaModel.Id}", JsonSerializer.Serialize(pessoaModel));
 
     var httpContext = accessor.HttpContext;
-    return Results.Created($"{httpContext?.Request.Scheme}://{httpContext?.Request.Host}/pessoas/{result.Id}", result);
+    return Results.Created($"{httpContext?.Request.Scheme}://{httpContext?.Request.Host}/pessoas/{pessoaModel.Id}", pessoaModel);
 
 }).Produces<PessoaModel>();
 
