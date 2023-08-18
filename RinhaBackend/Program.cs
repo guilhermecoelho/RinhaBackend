@@ -1,3 +1,4 @@
+using Alachisoft.NCache.EntityFrameworkCore;
 using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +44,14 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
 //builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
-builder.Services.AddDbContextPool<RinhaBackendContext>(conn => conn.UseNpgsql(connectionString, options => options.EnableRetryOnFailure()), 8192); 
+builder.Services.AddDbContextPool<RinhaBackendContext>(conn => 
+{
+    string cacheId = "myClusteredCache";
+    NCacheConfiguration.Configure(cacheId, DependencyType.SqlServer);
+    NCacheConfiguration.ConfigureLogger();
+    conn.UseNpgsql(connectionString, options => options.EnableRetryOnFailure()); 
+
+} , 8192); 
 
 //create database if not exist
 //using (var context = new RinhaBackendContext(connectionString))

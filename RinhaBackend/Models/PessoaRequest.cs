@@ -20,7 +20,15 @@ namespace RinhaBackend.Models
         {
             RuleFor(x => x.Nome).NotNull().MaximumLength(100);
             RuleFor(x => x.Apelido).NotNull().MaximumLength(32);
-            RuleFor(x => x.Nascimento).NotNull();
+            RuleFor(x => x.Nascimento).Must(IsValidDate).WithMessage("Data invalida");
+        }
+
+        private bool IsValidDate(string date)
+        {
+            DateTime dateConverted;
+            if (!DateTime.TryParse(date, out dateConverted))
+                return false;
+            return true;
         }
     }
 }
