@@ -34,8 +34,8 @@ services:
         deploy:
           resources:
             limits:
-              cpus: '0.3'
-              memory: '0.4GB'
+              cpus: '0.25'
+              memory: '0.5GB'
      api02:
         container_name: api02
         image: rinhabackend
@@ -52,8 +52,8 @@ services:
         deploy:
           resources:
             limits:
-              cpus: '0.3'
-              memory: '0.4GB'
+              cpus: '0.25'
+              memory: '0.5GB'
 
      redis:
         image: redis
@@ -78,14 +78,14 @@ services:
         deploy:
           resources:
             limits:
-              cpus: '0.1'
-              memory: '0.2GB'
+              cpus: '0.25'
+              memory: '0.5GB'
          
-     dbAdmin:
-            image: dpage/pgadmin4:latest
-            container_name: dbadmin
-            ports:
-               - "8080:80"
-            environment:
-               PGADMIN_DEFAULT_EMAIL: "teste@teste.com"
-               PGADMIN_DEFAULT_PASSWORD: "PgAdmin2022!"
+     # dbAdmin:
+     #        image: dpage/pgadmin4:latest
+     #        container_name: dbadmin
+     #        ports:
+     #           - "8080:80"
+     #        environment:
+     #           PGADMIN_DEFAULT_EMAIL: "teste@teste.com"
+     #           PGADMIN_DEFAULT_PASSWORD: "PgAdmin2022!"

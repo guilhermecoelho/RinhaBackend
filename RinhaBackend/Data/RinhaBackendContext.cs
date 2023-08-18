@@ -9,7 +9,7 @@ namespace RinhaBackend.Data
 
         public RinhaBackendContext(DbContextOptions<RinhaBackendContext> option) : base(option)
         {
-
+            this.ChangeTracker.LazyLoadingEnabled = false;
         }
 
         //public RinhaBackendContext(string connectionString)

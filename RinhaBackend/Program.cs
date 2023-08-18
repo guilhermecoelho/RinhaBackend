@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Caching.Distributed;
 using RinhaBackend.Data;
 using RinhaBackend.Models;
@@ -44,14 +45,14 @@ builder.Services.AddStackExchangeRedisCache(options => { options.Configuration =
 //database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
 //builder.Services.AddDbContext<RinhaBackendContext>(ServiceLifetime.Transient);
-builder.Services.AddDbContextPool<RinhaBackendContext>(conn => 
+builder.Services.AddDbContextPool<RinhaBackendContext>(conn =>
 {
-    string cacheId = "myClusteredCache";
-    NCacheConfiguration.Configure(cacheId, DependencyType.SqlServer);
-    NCacheConfiguration.ConfigureLogger();
-    conn.UseNpgsql(connectionString, options => options.EnableRetryOnFailure()); 
+    //string cacheId = "myClusteredCache";
+    //NCacheConfiguration.Configure(cacheId, DependencyType.SqlServer);
+    //NCacheConfiguration.ConfigureLogger();
+    conn.UseNpgsql(connectionString, options => options.EnableRetryOnFailure());
 
-} , 8192); 
+}, 8192);
 
 //create database if not exist
 //using (var context = new RinhaBackendContext(connectionString))
@@ -108,7 +109,9 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaData, [Fr
     var result = await _pessoaData.Add(pessoaModel);
 
     await _cache.SetStringAsync($"pessoa_apelido:{pessoaModel.Apelido}", pessoaModel.Apelido);
-    await _cache.SetStringAsync($"pessoa_id:{pessoaModel.Id}", JsonSerializer.Serialize(pessoaModel));
+
+    var pessoaResponse = mapper.Map<PessoaResponse>(pessoaModel);
+    await _cache.SetStringAsync($"pessoa_id:{pessoaModel.Id}", JsonSerializer.Serialize(pessoaResponse));
 
     var httpContext = accessor.HttpContext;
     return Results.Created($"{httpContext?.Request.Scheme}://{httpContext?.Request.Host}/pessoas/{pessoaModel.Id}", pessoaModel);
@@ -122,7 +125,7 @@ app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaRepository _pessoaData,
         var cache = await _cache.GetStringAsync($"pessoa_id:{id}");
         if (cache != null)
         {
-            var pessoaModel = JsonSerializer.Deserialize<PessoaModel>(cache);
+            var pessoaModel = JsonSerializer.Deserialize<PessoaResponse>(cache);
             var pessoaResponse = mapper.Map<PessoaResponse>(pessoaModel);
 
             return Results.Ok(pessoaResponse);
