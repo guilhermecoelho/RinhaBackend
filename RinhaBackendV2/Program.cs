@@ -1,6 +1,7 @@
 using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Caching.Distributed;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RinhaBackendV2.Models;
 using RinhaBackendV2.Repository;
 using StackExchange.Redis;
+using StackExchange.Redis.MultiplexerPool;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,28 +20,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 //Redis Configuration
-//var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
-//ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisConnectionString);
-
-//builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
-
-builder.Services.AddSingleton<IDatabase>(_ =>
+builder.Services.AddSingleton<IConnectionMultiplexerPool>(_ =>
 {
-    return ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")).GetDatabase();
+    return ConnectionMultiplexerPoolFactory.Create(
+        poolSize: 50,
+        configuration: builder.Configuration.GetConnectionString("RedisConnection"),
+        connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
 
-//builder.Services.AddStackExchangeRedisCache(options =>
-//{
-//    options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
-//});
-//builder.Services.AddDistributedMemoryCache();
 
 //In memory cache
 builder.Services.AddMemoryCache();
 
 //Postgres Configuration
 var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection");
-builder.Services.AddDbContext<RinhaBackendContext>(options =>
+builder.Services.AddDbContextPool<RinhaBackendContext>(options =>
 {
     options.UseNpgsql(connectionString);
 });
@@ -82,7 +77,12 @@ app.UseHttpsRedirection();
 
 
 //Insert pessoa
-app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaRepository, [FromServices] IDatabase _cache, [FromServices] IHttpContextAccessor accessor, IValidator<PessoaRequest> validator, [FromBody] PessoaRequest pessoa) =>
+app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaRepository,
+                               [FromServices] IConnectionMultiplexerPool _cache,
+                               [FromServices] IHttpContextAccessor accessor,
+                               [FromServices] IConnectionMultiplexerPool redis,
+                               IValidator<PessoaRequest> validator,
+                               [FromBody] PessoaRequest pessoa) =>
 {
     var validationResult = await validator.ValidateAsync(pessoa);
 
@@ -97,7 +97,6 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaRepositor
         await SetFromRedisCache(_cache, $"pessoa_apelido:{pessoa.Apelido}", pessoa.Apelido);
         return Results.UnprocessableEntity("apelido existente");
     }
-       
 
     var pessoaModel = mapper.Map<PessoaModel>(pessoa);
     pessoaModel.Id = Guid.NewGuid();
@@ -113,20 +112,16 @@ app.MapPost("/pessoas", async ([FromServices] IPessoaRepository _pessoaRepositor
 });
 
 //Get pessao by Id
-app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaRepository _pessoaRepository, [FromServices] IDatabase cache, String id) =>
+app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaRepository _pessoaRepository, [FromServices] IConnectionMultiplexerPool cache, String id) =>
 {
     try
     {
         var cacheKey = $"pessoa_id:{id}";
-
-        var t = await cache.PingAsync();
         var dataCache = await GetFromRedisCache(cache, cacheKey);
         if (dataCache != null)
         {
             var pessoaModel = JsonSerializer.Deserialize<PessoaModel>(dataCache);
-            var pessoaResponse = mapper.Map<PessoaResponse>(pessoaModel);
-
-            return Results.Ok(pessoaResponse);
+            return Results.Ok(pessoaModel);
         }
 
         var pessoaModelResult = await _pessoaRepository.GetById(new Guid(id));
@@ -136,11 +131,9 @@ app.MapGet("/pessoas/{id}", async ([FromServices] IPessoaRepository _pessoaRepos
 
         await SetFromRedisCache(cache, cacheKey, JsonSerializer.Serialize(pessoaModelResult));
 
-        var pessoaResult = mapper.Map<PessoaResponse>(pessoaModelResult);
-
-        return Results.Ok(pessoaResult);
+        return Results.Ok(pessoaModelResult);
     }
-    catch (Exception ex) 
+    catch (Exception ex)
     {
         return Results.UnprocessableEntity(ex);
     }
@@ -154,15 +147,13 @@ app.MapGet("/pessoas/", async ([FromServices] IPessoaRepository _pessoaData, [Fr
 
     var cache = GetFromMemoryCache(memoryCache, t);
     if (cache != null)
-        return Results.Ok(JsonSerializer.Deserialize<IEnumerable<PessoaResponse>>(cache));
+        return Results.Ok(JsonSerializer.Deserialize<IEnumerable<PessoaModel>>(cache));
 
     var result = await _pessoaData.SearchByString(t);
 
-    var pessoasResponse = mapper.Map<IEnumerable<PessoaResponse>>(result);
+    SetFromMemoryCache(memoryCache, t, JsonSerializer.Serialize(result));
 
-    SetFromMemoryCache(memoryCache, t, JsonSerializer.Serialize(pessoasResponse));
-
-    return Results.Ok(pessoasResponse);
+    return Results.Ok(result);
 
 }).Produces<PessoaResponse>();
 
@@ -179,11 +170,24 @@ app.Run();
 
 //Helper methods
 
-async Task<string> GetFromRedisCache(IDatabase cache, string key)
-=> await cache.StringGetAsync(key);
+async Task<string> GetFromRedisCache(IConnectionMultiplexerPool cache, string key)
+{
+    var pool = await cache.GetAsync();
+    var db = pool.Connection.GetDatabase();
 
-async Task SetFromRedisCache(IDatabase cache, string key, string content)
-=> await cache.StringSetAsync(key, content, TimeSpan.FromSeconds(60));
+    return await db.StringGetAsync(key);
+}
+
+
+async Task SetFromRedisCache(IConnectionMultiplexerPool cache, string key, string content)
+{
+    var pool = await cache.GetAsync();
+    var db = pool.Connection.GetDatabase();
+    var sub = pool.Connection.GetSubscriber();
+
+    await db.StringSetAsync(key, content, TimeSpan.FromSeconds(60));
+    await sub.PublishAsync("added-record", content);
+}
 
 string GetFromMemoryCache(IMemoryCache cache, string key)
 => cache.Get<string>(key);

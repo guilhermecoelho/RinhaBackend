@@ -5,7 +5,8 @@ services:
         image: postgres:12
         container_name: db
         #command: postgres -c 'max_connections=100'
-        command: postgres -c shared_buffers=256 -c max_connections=100
+        #command: postgres -c shared_buffers=256 -c max_connections=1000
+        command: 'postgres -c max_connections=1000 -c shared_buffers=512MB -c synchronous_commit=off -c fsync=off -c full_page_writes=off'
         volumes:
            - ./db_folder:/var/lib/postgresql/data 
         ports:
@@ -15,10 +16,10 @@ services:
            - MSSQL_PID=postgres
            - POSTGRES_PASSWORD=Postgres2018!   
         deploy:
-            resources:
-                limits:
-                    cpus: '1.0'
-                    memory: '1.5GB'
+            # resources:
+            #     limits:
+            #         cpus: '1.0'
+            #         memory: '1.5GB'
 
      api01:
         container_name: api01
@@ -33,10 +34,10 @@ services:
           - "53340:80"
           - "53341:443"
         deploy:
-          resources:
-            limits:
-              cpus: '0.1'
-              memory: '0.25GB'
+          # resources:
+          #   limits:
+          #     cpus: '0.1'
+          #     memory: '0.25GB'
      api02:
         container_name: api02
         image: rinhabackendv2
@@ -51,10 +52,10 @@ services:
           - "53344:80"
           - "53345:443"
         deploy:
-          resources:
-            limits:
-              cpus: '0.1'
-              memory: '0.25GB'
+          # resources:
+          #   limits:
+          #     cpus: '0.1'
+          #     memory: '0.25GB'
 
      redis:
         image: redis
@@ -62,10 +63,10 @@ services:
         ports:
           - "6379:6379"
         deploy:
-          resources:
-            limits:
-              cpus: '0.2'
-              memory: '0.2GB'
+          # resources:
+          #   limits:
+          #     cpus: '0.2'
+          #     memory: '0.2GB'
      proxy:
         container_name: proxy
         image: nginx:latest
@@ -77,10 +78,10 @@ services:
         ports:
           - "9999:9999"
         deploy:
-          resources:
-            limits:
-              cpus: '0.1'
-              memory: '0.3GB'
+          # resources:
+          #   limits:
+          #     cpus: '0.1'
+          #     memory: '0.3GB'
          
      dbAdmin:
             image: dpage/pgadmin4:latest
