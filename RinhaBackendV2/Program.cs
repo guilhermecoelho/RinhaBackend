@@ -1,5 +1,11 @@
+using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using RinhaBackendV2.Models;
 using RinhaBackendV2.Models.Requests;
 using RinhaBackendV2.Models.Responses;
@@ -34,6 +40,21 @@ db.Transacao.Add(new Transacao
 });
 db.SaveChanges();
 
+    cfg.CreateMap<PessoaRequest, PessoaModel>()
+       .ForMember(dest => dest.Nascimento, opt => opt.MapFrom(src => DateTime.SpecifyKind(DateTime.Parse(src.Nascimento), DateTimeKind.Utc)))
+       .ForMember(dest => dest.Stacks, opt => opt.MapFrom(src => src.Stacks.Select(x => new StackModel { Nome = x })));
+}
+).CreateMapper();
+builder.Services.AddSingleton(mapper);
+
+//interfaces
+builder.Services.AddTransient<IPessoaRepository, PessoaRepository>();
+
+//validators
+builder.Services.AddTransient<IValidator<PessoaRequest>, PessoaRequestValidation>();
+
+//others
+builder.Services.AddTransient<IHttpContextAccessor, HttpContextAccessor>();
 
 var app = builder.Build();
 
@@ -46,9 +67,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+//global variables
 
 app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, TransacoesRequest request) =>
 {
+    var validationResult = await validator.ValidateAsync(pessoa);
 
     var result = new TransacoesResponse();
 
@@ -58,6 +81,14 @@ app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, TransacoesRe
 
 app.MapGet("/clientes/{id}/extrato", async ([FromRoute] int id) =>
 {
+    if (string.IsNullOrEmpty(t))
+        return Results.BadRequest();
+
+    var cache = GetFromMemoryCache(memoryCache, t);
+    if (cache != null)
+        return Results.Ok(JsonSerializer.Deserialize<IEnumerable<PessoaModel>>(cache));
+
+    var result = await _pessoaData.SearchByString(t);
 
     var result = new TransacoesResponse();
 
@@ -66,4 +97,33 @@ app.MapGet("/clientes/{id}/extrato", async ([FromRoute] int id) =>
 }).Produces<TransacoesResponse>();
 
 app.Run();
+
+
+//Helper methods
+
+async Task<string> GetFromRedisCache(IConnectionMultiplexerPool cache, string key)
+{
+    var pool = await cache.GetAsync();
+    var db = pool.Connection.GetDatabase();
+
+    return await db.StringGetAsync(key);
+}
+
+
+async Task SetFromRedisCache(IConnectionMultiplexerPool cache, string key, string content)
+{
+    var pool = await cache.GetAsync();
+    var db = pool.Connection.GetDatabase();
+    var sub = pool.Connection.GetSubscriber();
+
+    await db.StringSetAsync(key, content, TimeSpan.FromSeconds(60));
+    await sub.PublishAsync("added-record", content);
+}
+
+string GetFromMemoryCache(IMemoryCache cache, string key)
+=> cache.Get<string>(key);
+
+void SetFromMemoryCache(IMemoryCache cache, string key, string content)
+=> cache.Set(key, content, DateTimeOffset.Now.AddSeconds(10));
+
 
