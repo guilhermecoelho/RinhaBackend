@@ -11,8 +11,8 @@ namespace RinhaBackendV2.Repository
             
         }
 
-        public DbSet<PessoaModel> Pessoas { get; set; }
-        public DbSet<StackModel> Stacks { get; set; }
+        public DbSet<Cliente> Cliente { get; set; }
+        public DbSet<Transacao> Transacao { get; set; }
 
         //public override void Dispose()
         //{

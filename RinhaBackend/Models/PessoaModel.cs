@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace RinhaBackendV2.Models
+namespace RinhaBackend.Models
 {
     public class PessoaModel
     {
@@ -8,13 +8,13 @@ namespace RinhaBackendV2.Models
 
         [Required]
         [StringLength(100)]
-        public string Nome { get; set; }
+        public string Nome { get; set;}
         [Required]
         [StringLength(32)]
-        public string Apelido { get; set; }
+        public string Apelido { get; set;}
         [Required]
         public DateTime Nascimento { get; set; }
 
-        public ICollection<StackModel> Stacks { get; set; } = new List<StackModel>();
+        public ICollection<StackModel> Stacks { get; set;} = new List<StackModel>();
     }
 }
