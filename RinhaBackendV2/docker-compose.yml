@@ -1,0 +1,72 @@
+﻿version: '3'
+services:
+
+     #api01_v2:
+     #   container_name: api01_v2
+     #   image: rinhabackendV2
+     #   build:
+     #     context: .
+     #     dockerfile: RinhaBackendV2/Dockerfile
+     #   depends_on:
+     #     - postgresqlserver
+     #   ports:
+     #     - "53340:80"
+     #     - "53341:443"
+     #   deploy:
+     #     resources:
+     #       limits:
+     #         cpus: '0.3'
+     #         memory: '0.4GB'
+     #api02_v2:
+     #   container_name: api02_v2
+     #   image: rinhabackendV2
+     #   build:
+     #     context: .
+     #     dockerfile: RinhaBackendV2/Dockerfile
+     #   depends_on:
+     #     - postgresqlserver
+     #   ports:
+     #     - "53340:80"
+     #     - "53341:443"
+     #   deploy:
+     #     resources:
+     #       limits:
+     #         cpus: '0.3'
+     #         memory: '0.4GB'
+
+     #proxy:
+     #   container_name: proxy
+     #   image: nginx:latest
+     #   volumes:
+     #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+     #   depends_on:
+     #     - api01
+     #     - api02
+     #   ports:
+     #     - "9999:9999"
+     #   deploy:
+     #     resources:
+     #       limits:
+     #         cpus: '0.1'
+     #         memory: '0.2GB'
+
+     postgresql_v2:
+                image: postgres:12
+                container_name: postgresql_v2
+                volumes:
+                   - C:\Docker\Glovo\postgresql:/var/lib/postgresql/data 
+                ports:
+                   - "5432:5432"
+                environment:
+                   - ACCEPT_EULA=Y 
+                   - MSSQL_PID=postgres
+                   - MSSQL_SA_PASSWORD=Postgres2018!    
+     pgAdmin_v2:
+            image: dpage/pgadmin4:latest
+            container_name: pgadmin_v2
+            ports:
+               - "8080:80"
+            environment:
+               PGADMIN_DEFAULT_EMAIL: "teste@teste.com"
+               PGADMIN_DEFAULT_PASSWORD: "PgAdmin2022!"
+
