@@ -1,9 +1,6 @@
-﻿using Alachisoft.NCache.EntityFrameworkCore;
-using Dapper;
+﻿
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using RinhaBackend.Models;
-using System.Text;
 
 namespace RinhaBackend.Data
 {

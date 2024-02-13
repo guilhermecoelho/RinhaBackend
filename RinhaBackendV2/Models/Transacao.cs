@@ -1,4 +1,5 @@
-﻿namespace RinhaBackendV2.Models
+﻿
+namespace RinhaBackendV2.Models
 {
     public class Transacao
     {

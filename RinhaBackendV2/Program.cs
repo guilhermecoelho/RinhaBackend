@@ -18,8 +18,16 @@ var db = new RinhaContext(dbBuilder.Options);
 db.Cliente.Add(new Cliente
 {
     Id = 1,
-    Limite = 1,
-    SaldoInicial = 1
+    Nome= "o barato sai caro",
+    Limite = 1000 * 100,
+    Saldo = 0
+});
+db.Cliente.Add(new Cliente
+{
+    Id = 2,
+    Nome = "zan corp ltda",
+    Limite = 800 * 100,
+    Saldo = 0
 });
 db.SaveChanges();
 

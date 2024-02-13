@@ -18,7 +18,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db_folder", "db_folder", "{
 		.gitkeep = .gitkeep
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RinhaBackendV2", "RinhaBackendV2\RinhaBackendV2.csproj", "{AE0AD7C5-F069-490B-BDD0-CC6F61D046BC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RinhaBackendV2", "RinhaBackendV2\RinhaBackendV2.csproj", "{AE0AD7C5-F069-490B-BDD0-CC6F61D046BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RinhaBackendV2.Tests", "RinhaBackendV2.Tests\RinhaBackendV2.Tests.csproj", "{523C73A2-2C5C-43CA-874F-13CB57E66592}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +36,10 @@ Global
 		{AE0AD7C5-F069-490B-BDD0-CC6F61D046BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AE0AD7C5-F069-490B-BDD0-CC6F61D046BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE0AD7C5-F069-490B-BDD0-CC6F61D046BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{523C73A2-2C5C-43CA-874F-13CB57E66592}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{523C73A2-2C5C-43CA-874F-13CB57E66592}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{523C73A2-2C5C-43CA-874F-13CB57E66592}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{523C73A2-2C5C-43CA-874F-13CB57E66592}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
